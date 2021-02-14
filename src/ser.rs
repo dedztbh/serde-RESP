@@ -1,7 +1,7 @@
 use serde::{ser, Serialize};
 
 use crate::error::Error::{IntegerOutOfBound, UnsupportedType};
-use crate::{Array, BulkString, Error, RESPType, Result};
+use crate::{Error, RESPType, Result};
 use serde::ser::SerializeSeq;
 use std::io::Write;
 use std::result;
@@ -20,12 +20,12 @@ impl<'a> serde::Serialize for RESPType<'a> {
             RESPType::Error(str) => s.serialize_str(&("-".to_owned() + str)),
             RESPType::Integer(i) => s.serialize_i64(*i),
             RESPType::BulkString(bulk_str) => match bulk_str {
-                BulkString::Null => s.serialize_unit_variant("BulkString", 0, "Null"),
-                BulkString::Value(val) => s.serialize_bytes(val),
+                None => s.serialize_unit_variant("BulkString", 0, "Null"),
+                Some(val) => s.serialize_bytes(val),
             },
             RESPType::Array(arr) => match arr {
-                Array::Null => s.serialize_unit_variant("Array", 0, "Null"),
-                Array::Value(vals) => {
+                None => s.serialize_unit_variant("Array", 0, "Null"),
+                Some(vals) => {
                     let mut s = s.serialize_seq(Some(vals.len()))?;
                     for v in *vals {
                         s.serialize_element(v)?;
@@ -46,8 +46,7 @@ where
     T: Serialize,
 {
     let mut buf: Vec<u8> = Vec::new();
-    let mut serializer = Serializer { writer: &mut buf };
-    value.serialize(&mut serializer)?;
+    to_writer(value, &mut buf)?;
     Ok(String::from_utf8(buf)?)
 }
 
@@ -93,6 +92,7 @@ where
     }
 
     fn serialize_i64(self, v: i64) -> Result<()> {
+        self.writer.write_all(b":")?;
         itoa::write(&mut self.writer, v)?;
         self.writer.write_all(b"\r\n")?;
         Ok(())
