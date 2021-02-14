@@ -5,16 +5,23 @@ use serde::{de, ser};
 use std::io;
 use std::string::FromUtf8Error;
 
+/// Result type used by the crate
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Error type used by the crate
 #[derive(Clone, Debug, PartialEq)]
 pub enum Error {
+    /// For custom errors by serde.
     Message(String),
     // Eof,
     // Syntax,
+    /// Type is not mapped to a RESP type.
     UnsupportedType,
+    /// Integer value does not fit in an i64.
     IntegerOutOfBound,
+    /// IO error.
     Io(String),
+    /// Trying to convert non-utf-8 bytes to string.
     FromUtf8(String),
     // ExpectedInteger,
     // ExpectedString,
@@ -59,7 +66,7 @@ impl From<io::Error> for Error {
     }
 }
 
-// This happens when to_string on non-utf8 bytes
+/// This happens when to_string on non-utf8 bytes
 impl From<FromUtf8Error> for Error {
     fn from(e: FromUtf8Error) -> Self {
         Error::FromUtf8(format!("{:?}", e))
