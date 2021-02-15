@@ -1,10 +1,10 @@
 use crate::{Error, RESPType, Result};
 
-use serde::de::{self, DeserializeSeed, SeqAccess, Visitor};
+use serde::de::{self, DeserializeOwned, DeserializeSeed, SeqAccess, Visitor};
 use serde::Deserialize;
 
 use std::fmt;
-use std::io::BufRead;
+use std::io::{BufRead, BufReader, Cursor, Read};
 
 /// Serializer for RESP format
 pub struct Deserializer<'de, R: BufRead> {
@@ -18,17 +18,43 @@ impl<'de, R: BufRead> Deserializer<'de, R> {
     }
 }
 
-/// Deserialize from reader with `BufRead` trait.
+/// Deserialize from str.
 ///
-/// Due to complicated lifetime issues, other kinds of from_* are not yet implemented.
-/// For now, wrap your serialized data with something with `BufRead` trait.
-/// For example, for strings use `std::io::Cursor`.
+/// This function simple wraps the `&str` with `Cursor` and calls [from_buf_reader](ser::from_buf_reader).
 ///
 /// # Errors
 /// Please refer to [Error](Error)
-pub fn from_buf_reader<'de, T, R>(reader: &'de mut R) -> Result<T>
+pub fn from_str<T>(s: &str) -> Result<T>
 where
-    T: Deserialize<'de>,
+    T: DeserializeOwned,
+{
+    let mut reader = Cursor::new(s);
+    from_buf_reader(&mut reader)
+}
+
+/// Deserialize from reader with `Read` trait.
+///
+/// This function simply wraps the reader with a `BufReader` and calls [from_buf_reader](ser::from_buf_reader).
+/// If your reader has `BufRead` trait, use [from_buf_reader](ser::from_buf_reader) instead.
+///
+/// # Errors
+/// Please refer to [Error](Error)
+pub fn from_reader<T, R>(reader: &mut R) -> Result<T>
+where
+    T: DeserializeOwned,
+    R: Read,
+{
+    let mut reader = BufReader::new(reader);
+    from_buf_reader(&mut reader)
+}
+
+/// Deserialize from reader with `BufRead` trait.
+///
+/// # Errors
+/// Please refer to [Error](Error)
+pub fn from_buf_reader<T, R>(reader: &mut R) -> Result<T>
+where
+    T: DeserializeOwned,
     R: BufRead,
 {
     let mut deserializer = Deserializer::from_buf_reader(reader);
@@ -239,23 +265,23 @@ impl<'de, 'a, R: BufRead> de::Deserializer<'de> for &'a mut Deserializer<'de, R>
         visitor.visit_seq(RESPArray::new(&mut self, x as usize))
     }
 
-    fn deserialize_tuple<V>(self, _len: usize, visitor: V) -> Result<V::Value>
+    fn deserialize_tuple<V>(self, _len: usize, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        self.deserialize_seq(visitor)
+        unimplemented!()
     }
 
     fn deserialize_tuple_struct<V>(
         self,
         _name: &'static str,
         _len: usize,
-        visitor: V,
+        _visitor: V,
     ) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        self.deserialize_seq(visitor)
+        unimplemented!()
     }
 
     fn deserialize_map<V>(self, _visitor: V) -> Result<V::Value>

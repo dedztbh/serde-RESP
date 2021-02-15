@@ -1,9 +1,9 @@
 [package]
 name = "serde-resp"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["DEDZTBH <peiqial@outlook.com>"]
 edition = "2018"
-license-file = "LICENSE"
+license = "MIT"
 description = "Redis RESP protocol serialization and deserialization with serde"
 repository = "https://github.com/DEDZTBH/serde-RESP"
 keywords = ["redis", "serde", "serialization"]

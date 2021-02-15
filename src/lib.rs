@@ -22,7 +22,7 @@
 //!
 //! To serialize, use [ser::to_string](ser::to_string) or [ser::to_writer](ser::to_writer).
 //!
-//! To deserialize, use [ser::from_buf_reader](ser::from_buf_reader).
+//! To deserialize, use [de::from_str](de::from_str) or [de::from_reader](de::from_reader) or [de::from_buf_reader](de::from_buf_reader).
 //!
 //! For usage examples, refer to [RESPType](RESPType)
 
@@ -48,9 +48,7 @@ pub enum RESPType {
     /// assert_eq!("+OK\r\n".to_owned(), serialized);
     ///
     /// /// Deserialization
-    /// let s = "+OK\r\n";
-    /// let mut reader = std::io::Cursor::new(s);
-    /// let deserialized: RESPType = de::from_buf_reader(&mut reader).unwrap();
+    /// let deserialized: RESPType = de::from_str("+OK\r\n").unwrap();
     /// assert_eq!(RESPType::SimpleString("OK".to_owned()), deserialized);
     /// ```
     SimpleString(String),
@@ -77,9 +75,7 @@ pub enum RESPType {
     /// );
     ///
     /// /// Deserialization
-    /// let s = "-ERR unknown command 'foobar'\r\n";
-    /// let mut reader = std::io::Cursor::new(s);
-    /// let deserialized: RESPType = de::from_buf_reader(&mut reader).unwrap();
+    /// let deserialized: RESPType = de::from_str("-ERR unknown command 'foobar'\r\n").unwrap();
     /// assert_eq!(RESPType::Error("ERR unknown command 'foobar'".to_owned()), deserialized);
     /// ```
     Error(String),
@@ -96,9 +92,7 @@ pub enum RESPType {
     /// assert_eq!(":1000\r\n".to_owned(), serialized);
     ///
     /// /// Deserialization
-    /// let s = ":1000\r\n";
-    /// let mut reader = std::io::Cursor::new(s);
-    /// let deserialized: RESPType = de::from_buf_reader(&mut reader).unwrap();
+    /// let deserialized: RESPType = de::from_str(":1000\r\n").unwrap();
     /// assert_eq!(RESPType::Integer(1000), deserialized);
     /// ```
     Integer(i64),
@@ -129,21 +123,15 @@ pub enum RESPType {
     ///
     /// /// Deserialization
     /// // Regular Example
-    /// let s = "$6\r\nfoobar\r\n";
-    /// let mut reader = std::io::Cursor::new(s);
-    /// let deserialized: RESPType = de::from_buf_reader(&mut reader).unwrap();
+    /// let deserialized: RESPType = de::from_str("$6\r\nfoobar\r\n").unwrap();
     /// assert_eq!(RESPType::BulkString(Some(b"foobar".to_vec())), deserialized);
     ///
     /// // Empty
-    /// let s = "$0\r\n\r\n";
-    /// let mut reader = std::io::Cursor::new(s);
-    /// let deserialized: RESPType = de::from_buf_reader(&mut reader).unwrap();
+    /// let deserialized: RESPType = de::from_str("$0\r\n\r\n").unwrap();
     /// assert_eq!(RESPType::BulkString(Some(b"".to_vec())), deserialized);
     ///
     /// // Null
-    /// let s = "$-1\r\n";
-    /// let mut reader = std::io::Cursor::new(s);
-    /// let deserialized: RESPType = de::from_buf_reader(&mut reader).unwrap();
+    /// let deserialized: RESPType = de::from_str("$-1\r\n").unwrap();
     /// assert_eq!(RESPType::BulkString(None), deserialized);
     /// ```
     BulkString(Option<Vec<u8>>),
@@ -229,15 +217,11 @@ pub enum RESPType {
     ///
     /// /// Deserialization
     /// // Null
-    /// let s = "*-1\r\n";
-    /// let mut reader = std::io::Cursor::new(s);
-    /// let deserialized: RESPType = de::from_buf_reader(&mut reader).unwrap();
+    /// let deserialized: RESPType = de::from_str("*-1\r\n").unwrap();
     /// assert_eq!(RESPType::Array(None), deserialized);
     ///
     /// // Mixed Type
-    /// let s = "*2\r\n:1\r\n$6\r\nfoobar\r\n";
-    /// let mut reader = std::io::Cursor::new(s);
-    /// let deserialized: RESPType = de::from_buf_reader(&mut reader).unwrap();
+    /// let deserialized: RESPType = de::from_str("*2\r\n:1\r\n$6\r\nfoobar\r\n").unwrap();
     /// let expected = RESPType::Array(Some(vec![
     ///     RESPType::Integer(1),
     ///     RESPType::BulkString(Some(b"foobar".to_vec()))
@@ -245,9 +229,7 @@ pub enum RESPType {
     /// assert_eq!(expected, deserialized);
     ///
     /// // Arrays of Arrays with Null Bulk String
-    /// let s = "*3\r\n*3\r\n:1\r\n:2\r\n:3\r\n$-1\r\n*2\r\n+Foo\r\n-Bar\r\n";
-    /// let mut reader = std::io::Cursor::new(s);
-    /// let deserialized: RESPType = de::from_buf_reader(&mut reader).unwrap();
+    /// let deserialized: RESPType = de::from_str("*3\r\n*3\r\n:1\r\n:2\r\n:3\r\n$-1\r\n*2\r\n+Foo\r\n-Bar\r\n").unwrap();
     /// let expected = RESPType::Array(Some(vec![
     ///     RESPType::Integer(1),
     ///     RESPType::BulkString(Some(b"foobar".to_vec()))
