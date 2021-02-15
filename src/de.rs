@@ -3,37 +3,29 @@ use crate::{Error, RESPType, Result};
 use serde::de::{self, DeserializeSeed, SeqAccess, Visitor};
 use serde::Deserialize;
 
-use crate::Error::{Eof, Syntax, UnsupportedType};
 use std::fmt;
-use std::io::{BufRead, BufReader, Cursor, Read};
+use std::io::BufRead;
 
-enum _RSEPType {
-    SimpleString,
-    Error,
-    Integer,
-    BulkString,
-    Array,
-}
-
+/// Serializer for RESP format
 pub struct Deserializer<'de, R: BufRead> {
     reader: &'de mut R,
 }
 
 impl<'de, R: BufRead> Deserializer<'de, R> {
+    /// Method for building Deserializer
     pub fn from_buf_reader(reader: &'de mut R) -> Deserializer<'de, R> {
         Deserializer { reader }
     }
 }
 
-// pub fn from_reader<'de, T, R>(reader: &'de mut R) -> Result<T>
-// where
-//     T: Deserialize<'de>,
-//     R: Read,
-// {
-//     let mut reader = BufReader::new(reader);
-//     from_buf_reader(&mut reader)
-// }
-
+/// Deserialize from reader with `BufRead` trait.
+///
+/// Due to complicated lifetime issues, other kinds of from_* are not yet implemented.
+/// For now, wrap your serialized data with something with `BufRead` trait.
+/// For example, for strings use `std::io::Cursor`.
+///
+/// # Errors
+/// Please refer to [Error](Error)
 pub fn from_buf_reader<'de, T, R>(reader: &'de mut R) -> Result<T>
 where
     T: Deserialize<'de>,
@@ -41,25 +33,17 @@ where
 {
     let mut deserializer = Deserializer::from_buf_reader(reader);
     let t = T::deserialize(&mut deserializer)?;
-    if deserializer.eof()? {
-        Err(Eof)
-    } else {
-        Ok(t)
-    }
+    Ok(t)
 }
 
 impl<'de, R: BufRead> Deserializer<'de, R> {
-    fn eof(&mut self) -> Result<bool> {
-        Ok(self.reader.fill_buf()?.len() == 0)
-    }
-
     fn read_isize(&mut self) -> Result<isize> {
         let mut buffer = String::new();
         self.reader.read_line(&mut buffer)?;
         let trimmed = buffer.trim_end();
         match trimmed.parse::<isize>() {
             Ok(x) => Ok(x),
-            Err(_) => Err(Syntax),
+            Err(_) => Err(Error::Syntax),
         }
     }
 }
@@ -67,6 +51,7 @@ impl<'de, R: BufRead> Deserializer<'de, R> {
 impl<'de, 'a, R: BufRead> de::Deserializer<'de> for &'a mut Deserializer<'de, R> {
     type Error = Error;
 
+    // You see, this is a bit hacky...
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
@@ -74,12 +59,12 @@ impl<'de, 'a, R: BufRead> de::Deserializer<'de> for &'a mut Deserializer<'de, R>
         let mut buf = [0u8; 1];
         self.reader.read_exact(&mut buf)?;
         match buf[0] {
-            b'+' => self.deserialize_str(visitor),
-            b'-' => self.deserialize_string(visitor),
-            b':' => self.deserialize_i64(visitor),
-            b'$' => self.deserialize_byte_buf(visitor),
-            b'*' => self.deserialize_seq(visitor),
-            _ => return Err(Syntax),
+            b'+' => self.deserialize_str(visitor),      // SimpleString
+            b'-' => self.deserialize_string(visitor),   // Error
+            b':' => self.deserialize_i64(visitor),      // Integer
+            b'$' => self.deserialize_byte_buf(visitor), // BulkString
+            b'*' => self.deserialize_seq(visitor),      // Array
+            _ => return Err(Error::Syntax),
         }
     }
 
@@ -87,28 +72,28 @@ impl<'de, 'a, R: BufRead> de::Deserializer<'de> for &'a mut Deserializer<'de, R>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn deserialize_i8<V>(self, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn deserialize_i16<V>(self, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn deserialize_i32<V>(self, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value>
@@ -119,7 +104,7 @@ impl<'de, 'a, R: BufRead> de::Deserializer<'de> for &'a mut Deserializer<'de, R>
         self.reader.read_line(&mut buffer)?;
         match buffer.trim_end().parse::<i64>() {
             Ok(x) => visitor.visit_i64(x),
-            Err(_) => Err(Syntax),
+            Err(_) => Err(Error::Syntax),
         }
     }
 
@@ -127,49 +112,49 @@ impl<'de, 'a, R: BufRead> de::Deserializer<'de> for &'a mut Deserializer<'de, R>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn deserialize_u16<V>(self, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn deserialize_u32<V>(self, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn deserialize_u64<V>(self, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn deserialize_f32<V>(self, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn deserialize_f64<V>(self, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn deserialize_char<V>(self, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     // SimpleString
@@ -196,7 +181,7 @@ impl<'de, 'a, R: BufRead> de::Deserializer<'de> for &'a mut Deserializer<'de, R>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value>
@@ -216,28 +201,28 @@ impl<'de, 'a, R: BufRead> de::Deserializer<'de> for &'a mut Deserializer<'de, R>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn deserialize_unit<V>(self, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn deserialize_unit_struct<V>(self, _name: &'static str, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn deserialize_newtype_struct<V>(self, _name: &'static str, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     // Deserialization of compound types like sequences and maps happens by
@@ -277,7 +262,7 @@ impl<'de, 'a, R: BufRead> de::Deserializer<'de> for &'a mut Deserializer<'de, R>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn deserialize_struct<V>(
@@ -289,7 +274,7 @@ impl<'de, 'a, R: BufRead> de::Deserializer<'de> for &'a mut Deserializer<'de, R>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn deserialize_enum<V>(
@@ -301,27 +286,26 @@ impl<'de, 'a, R: BufRead> de::Deserializer<'de> for &'a mut Deserializer<'de, R>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn deserialize_identifier<V>(self, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
-    fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value>
+    fn deserialize_ignored_any<V>(self, _visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        self.deserialize_any(visitor)
+        unimplemented!()
     }
 }
 
 struct RESPArray<'a, 'de: 'a, R: BufRead> {
     de: &'a mut Deserializer<'de, R>,
-    len: usize,
     remain_len: usize,
 }
 
@@ -329,7 +313,6 @@ impl<'a, 'de, R: BufRead> RESPArray<'a, 'de, R> {
     fn new(de: &'a mut Deserializer<'de, R>, len: usize) -> Self {
         RESPArray {
             de,
-            len,
             remain_len: len,
         }
     }
@@ -352,7 +335,7 @@ impl<'de, 'a, R: BufRead> SeqAccess<'de> for RESPArray<'a, 'de, R> {
     }
 
     fn size_hint(&self) -> Option<usize> {
-        Some(self.len)
+        Some(self.remain_len)
     }
 }
 
@@ -437,8 +420,6 @@ impl<'de> Deserialize<'de> for RESPType {
     where
         D: de::Deserializer<'de>,
     {
-        let visitor = RESPTypeVisitor;
-
-        deserializer.deserialize_any(visitor)
+        deserializer.deserialize_any(RESPTypeVisitor)
     }
 }

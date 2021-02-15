@@ -1,46 +1,21 @@
 use serde::{ser, Serialize};
 
-use crate::error::Error::{IntegerOutOfBound, UnsupportedType};
 use crate::{Error, RESPType, Result};
 use serde::ser::SerializeSeq;
 use std::io::Write;
 use std::result;
 
-// Implement serialization for RESPType
-impl serde::Serialize for RESPType {
-    fn serialize<S>(
-        &self,
-        s: S,
-    ) -> result::Result<<S as serde::Serializer>::Ok, <S as serde::Serializer>::Error>
-    where
-        S: serde::Serializer,
-    {
-        match self {
-            RESPType::SimpleString(str) => s.serialize_str(&("+".to_owned() + str)),
-            RESPType::Error(str) => s.serialize_str(&("-".to_owned() + str)),
-            RESPType::Integer(i) => s.serialize_i64(*i),
-            RESPType::BulkString(bulk_str) => match bulk_str {
-                None => s.serialize_unit_variant("BulkString", 0, "Null"),
-                Some(val) => s.serialize_bytes(val),
-            },
-            RESPType::Array(arr) => match arr {
-                None => s.serialize_unit_variant("Array", 0, "Null"),
-                Some(vals) => {
-                    let mut s = s.serialize_seq(Some(vals.len()))?;
-                    for v in vals {
-                        s.serialize_element(v)?;
-                    }
-                    s.end()
-                }
-            },
-        }
-    }
-}
-
+/// Serializer for RESP format
 pub struct Serializer<W: Write> {
     writer: W,
 }
 
+/// Serialize to string.
+///
+/// Please do not use this method with [RESPType::BulkString](RESPType::BulkString) that contains non-UTF8 data.
+///
+/// # Errors
+/// Please refer to [Error](Error)
 pub fn to_string<T>(value: &T) -> Result<String>
 where
     T: Serialize,
@@ -50,6 +25,10 @@ where
     Ok(String::from_utf8(buf)?)
 }
 
+/// Serialize to writer with `Write` trait.
+///
+/// # Errors
+/// Please refer to [Error](Error)
 pub fn to_writer<T, W>(value: &T, writer: &mut W) -> Result<()>
 where
     T: Serialize,
@@ -75,20 +54,19 @@ where
     type SerializeStructVariant = Self;
 
     fn serialize_bool(self, _v: bool) -> Result<()> {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
-    // Integers must fit within an i64
-    fn serialize_i8(self, v: i8) -> Result<()> {
-        self.serialize_i64(i64::from(v))
+    fn serialize_i8(self, _v: i8) -> Result<()> {
+        unimplemented!()
     }
 
-    fn serialize_i16(self, v: i16) -> Result<()> {
-        self.serialize_i64(i64::from(v))
+    fn serialize_i16(self, _v: i16) -> Result<()> {
+        unimplemented!()
     }
 
-    fn serialize_i32(self, v: i32) -> Result<()> {
-        self.serialize_i64(i64::from(v))
+    fn serialize_i32(self, _v: i32) -> Result<()> {
+        unimplemented!()
     }
 
     fn serialize_i64(self, v: i64) -> Result<()> {
@@ -98,32 +76,28 @@ where
         Ok(())
     }
 
-    fn serialize_u8(self, v: u8) -> Result<()> {
-        self.serialize_u64(u64::from(v))
+    fn serialize_u8(self, _v: u8) -> Result<()> {
+        unimplemented!()
     }
 
-    fn serialize_u16(self, v: u16) -> Result<()> {
-        self.serialize_u64(u64::from(v))
+    fn serialize_u16(self, _v: u16) -> Result<()> {
+        unimplemented!()
     }
 
-    fn serialize_u32(self, v: u32) -> Result<()> {
-        self.serialize_u64(u64::from(v))
+    fn serialize_u32(self, _v: u32) -> Result<()> {
+        unimplemented!()
     }
 
-    fn serialize_u64(self, v: u64) -> Result<()> {
-        if v > std::i64::MAX as u64 {
-            Err(IntegerOutOfBound)
-        } else {
-            self.serialize_i64(v as i64)
-        }
+    fn serialize_u64(self, _v: u64) -> Result<()> {
+        unimplemented!()
     }
 
     fn serialize_f32(self, _v: f32) -> Result<()> {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn serialize_f64(self, _v: f64) -> Result<()> {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     // Serialize a char as a single-character string.
@@ -148,46 +122,43 @@ where
         Ok(())
     }
 
+    // RESPType::BulkString::Null
     fn serialize_none(self) -> Result<()> {
-        Err(UnsupportedType)
+        self.writer.write_all(b"$-1\r\n")?;
+        Ok(())
     }
 
     fn serialize_some<T>(self, _value: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
-    // Use `RESPBulkString::Null` and `RESPArray::Null` instead
+    // RESPType::Array::Null
     fn serialize_unit(self) -> Result<()> {
-        Err(UnsupportedType)
+        self.writer.write_all(b"*-1\r\n")?;
+        Ok(())
     }
 
     fn serialize_unit_struct(self, _name: &'static str) -> Result<()> {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
-    // It might be `RESPType::BulkString::Null` or `RESPType::Array::Null`
     fn serialize_unit_variant(
         self,
-        name: &'static str,
+        _name: &'static str,
         _variant_index: u32,
         _variant: &'static str,
     ) -> Result<()> {
-        match name {
-            "BulkString" => self.writer.write_all(b"$-1\r\n")?,
-            "Array" => self.writer.write_all(b"*-1\r\n")?,
-            _ => return Err(UnsupportedType),
-        }
-        Ok(())
+        unimplemented!()
     }
 
     fn serialize_newtype_struct<T>(self, _name: &'static str, _value: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn serialize_newtype_variant<T>(
@@ -200,13 +171,13 @@ where
     where
         T: ?Sized + Serialize,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     // Write beginning of array
     fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq> {
         match len {
-            None => return Err(UnsupportedType),
+            None => unimplemented!(),
             Some(len) => {
                 self.writer.write_all(b"*")?;
                 itoa::write(&mut self.writer, len as u64)?;
@@ -216,37 +187,34 @@ where
         Ok(self)
     }
 
-    // Treat as array
-    fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple> {
-        self.serialize_seq(Some(len))
+    fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple> {
+        unimplemented!()
     }
 
-    // Treat as array
     fn serialize_tuple_struct(
         self,
         _name: &'static str,
-        len: usize,
+        _len: usize,
     ) -> Result<Self::SerializeTupleStruct> {
-        self.serialize_seq(Some(len))
+        unimplemented!()
     }
 
-    // Treat as array
     fn serialize_tuple_variant(
         self,
         _name: &'static str,
         _variant_index: u32,
         _variant: &'static str,
-        len: usize,
+        _len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
-        self.serialize_seq(Some(len))
+        unimplemented!()
     }
 
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn serialize_struct(self, _name: &'static str, _len: usize) -> Result<Self::SerializeStruct> {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 
     fn serialize_struct_variant(
@@ -256,7 +224,7 @@ where
         _variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeStructVariant> {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 }
 
@@ -288,7 +256,6 @@ where
     }
 }
 
-// Same thing but for tuples.
 impl<'a, W> ser::SerializeTuple for &'a mut Serializer<W>
 where
     W: Write,
@@ -296,19 +263,18 @@ where
     type Ok = ();
     type Error = Error;
 
-    fn serialize_element<T>(&mut self, value: &T) -> Result<()>
+    fn serialize_element<T>(&mut self, _value: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
     {
-        value.serialize(&mut **self)
+        unimplemented!()
     }
 
     fn end(self) -> Result<()> {
-        Ok(())
+        unimplemented!()
     }
 }
 
-// Same thing but for tuple structs.
 impl<'a, W> ser::SerializeTupleStruct for &'a mut Serializer<W>
 where
     W: Write,
@@ -316,19 +282,18 @@ where
     type Ok = ();
     type Error = Error;
 
-    fn serialize_field<T>(&mut self, value: &T) -> Result<()>
+    fn serialize_field<T>(&mut self, _value: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
     {
-        value.serialize(&mut **self)
+        unimplemented!()
     }
 
     fn end(self) -> Result<()> {
-        Ok(())
+        unimplemented!()
     }
 }
 
-// Tuple variants
 impl<'a, W> ser::SerializeTupleVariant for &'a mut Serializer<W>
 where
     W: Write,
@@ -336,19 +301,18 @@ where
     type Ok = ();
     type Error = Error;
 
-    fn serialize_field<T>(&mut self, value: &T) -> Result<()>
+    fn serialize_field<T>(&mut self, _value: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
     {
-        value.serialize(&mut **self)
+        unimplemented!()
     }
 
     fn end(self) -> Result<()> {
-        Ok(())
+        unimplemented!()
     }
 }
 
-// The rest are not supported
 impl<'a, W> ser::SerializeMap for &'a mut Serializer<W>
 where
     W: Write,
@@ -359,16 +323,16 @@ where
     where
         T: ?Sized + Serialize,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
     fn serialize_value<T>(&mut self, _value: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
     fn end(self) -> Result<()> {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 }
 
@@ -382,10 +346,10 @@ where
     where
         T: ?Sized + Serialize,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
     fn end(self) -> Result<()> {
-        Err(UnsupportedType)
+        unimplemented!()
     }
 }
 
@@ -399,9 +363,40 @@ where
     where
         T: ?Sized + Serialize,
     {
-        Err(UnsupportedType)
+        unimplemented!()
     }
     fn end(self) -> Result<()> {
-        Err(UnsupportedType)
+        unimplemented!()
+    }
+}
+
+// Implement serialization for RESPType
+impl serde::Serialize for RESPType {
+    fn serialize<S>(
+        &self,
+        s: S,
+    ) -> result::Result<<S as serde::Serializer>::Ok, <S as serde::Serializer>::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            RESPType::SimpleString(str) => s.serialize_str(&("+".to_owned() + str)),
+            RESPType::Error(str) => s.serialize_str(&("-".to_owned() + str)),
+            RESPType::Integer(i) => s.serialize_i64(*i),
+            RESPType::BulkString(bulk_str) => match bulk_str {
+                None => s.serialize_none(),
+                Some(val) => s.serialize_bytes(val),
+            },
+            RESPType::Array(arr) => match arr {
+                None => s.serialize_unit(),
+                Some(vals) => {
+                    let mut s = s.serialize_seq(Some(vals.len()))?;
+                    for v in vals {
+                        s.serialize_element(v)?;
+                    }
+                    s.end()
+                }
+            },
+        }
     }
 }
