@@ -20,7 +20,7 @@ impl<'de, R: BufRead> Deserializer<'de, R> {
 
 /// Deserialize from str.
 ///
-/// This function simple wraps the `&str` with `Cursor` and calls [from_buf_reader](ser::from_buf_reader).
+/// This function simple wraps the `&str` with `Cursor` and calls [from_buf_reader](from_buf_reader).
 ///
 /// # Errors
 /// Please refer to [Error](Error)
@@ -34,8 +34,8 @@ where
 
 /// Deserialize from reader with `Read` trait.
 ///
-/// This function simply wraps the reader with a `BufReader` and calls [from_buf_reader](ser::from_buf_reader).
-/// If your reader has `BufRead` trait, use [from_buf_reader](ser::from_buf_reader) instead.
+/// This function simply wraps the reader with a `BufReader` and calls [from_buf_reader](from_buf_reader).
+/// If your reader has `BufRead` trait, use [from_buf_reader](from_buf_reader) instead.
 ///
 /// # Errors
 /// Please refer to [Error](Error)
@@ -210,6 +210,7 @@ impl<'de, 'a, R: BufRead> de::Deserializer<'de> for &'a mut Deserializer<'de, R>
         unimplemented!()
     }
 
+    // BulkString
     fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
@@ -220,6 +221,7 @@ impl<'de, 'a, R: BufRead> de::Deserializer<'de> for &'a mut Deserializer<'de, R>
         }
         let mut buffer = vec![0u8; x as usize];
         self.reader.read_exact(&mut buffer)?;
+        self.reader.read_exact(&mut [0u8; 2])?; // also consume CRLF
         visitor.visit_byte_buf(buffer)
     }
 
