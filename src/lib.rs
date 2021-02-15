@@ -11,7 +11,7 @@ pub use error::{Error, Result};
 
 /// This enum creates a one-to-one type mapping with RESP types.
 /// It is recommended to use variants of this type for serde operations.
-pub enum RESPType<'a> {
+pub enum RESPType {
     /// Correspond to simple string in RESP.
     ///
     /// # Examples
@@ -43,19 +43,13 @@ pub enum RESPType<'a> {
     /// ```
     Error(String),
     /// Correspond to integer in RESP.
-    /// Primative ints can also be used for serde operations but if value is outside i64 there will be a `Error::IntegerOutOfBound` error.
     ///
     /// # Examples
     /// ```
     /// use serde_resp::{ser, RESPType};
     ///
-    /// // Primitive Example
-    /// let obj = 1000i32;
-    /// let serialized = ser::to_string(&obj).unwrap();
-    /// assert_eq!(":1000\r\n".to_owned(), serialized);
-    ///
     /// // Regular Example
-    /// let obj = RESPType::Integer(obj as i64);
+    /// let obj = RESPType::Integer(1000i64);
     /// let serialized = ser::to_string(&obj).unwrap();
     /// assert_eq!(":1000\r\n".to_owned(), serialized);
     ///
@@ -88,11 +82,10 @@ pub enum RESPType<'a> {
     /// let serialized = ser::to_string(&obj).unwrap();
     /// assert_eq!("$-1\r\n".to_owned(), serialized);
     /// ```
-    BulkString(Option<&'a [u8]>),
+    BulkString(Option<Vec<u8>>),
     /// Correspond to array in RESP. Use None for null array and Some for non-null ones.
-    /// [RESPType] is also supported. Though you cannot represent null array with it.
     ///
-    /// Arrays of arrays are allowed.
+    /// Mixed type, arrays of arrays are allowed.
     ///
     /// # Examples
     /// ```
@@ -103,16 +96,11 @@ pub enum RESPType<'a> {
     /// let serialized = ser::to_string(&obj).unwrap();
     /// assert_eq!("*0\r\n".to_owned(), serialized);
     ///
-    /// // Example using [RESPType]
-    /// let obj = [
+    /// // Regular Example
+    /// let obj = RESPType::Array(Some(&[
     ///     RESPType::BulkString(Some(b"foo")),
     ///     RESPType::BulkString(Some(b"bar")),
-    /// ];
-    /// let serialized = ser::to_string(&obj).unwrap();
-    /// assert_eq!("*2\r\n$3\r\nfoo\r\n$3\r\nbar\r\n".to_owned(), serialized);
-    ///
-    /// // Regular Example
-    /// let obj = RESPType::Array(Some(&obj));
+    /// ]));
     /// let serialized = ser::to_string(&obj).unwrap();
     /// assert_eq!("*2\r\n$3\r\nfoo\r\n$3\r\nbar\r\n".to_owned(), serialized);
     ///
@@ -178,5 +166,5 @@ pub enum RESPType<'a> {
     ///     serialized
     /// );
     /// ```
-    Array(Option<&'a [RESPType<'a>]>),
+    Array(Option<Vec<RESPType>>),
 }

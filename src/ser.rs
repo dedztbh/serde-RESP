@@ -7,7 +7,7 @@ use std::io::Write;
 use std::result;
 
 // Implement serialization for RESPType
-impl<'a> serde::Serialize for RESPType<'a> {
+impl serde::Serialize for RESPType {
     fn serialize<S>(
         &self,
         s: S,
@@ -27,7 +27,7 @@ impl<'a> serde::Serialize for RESPType<'a> {
                 None => s.serialize_unit_variant("Array", 0, "Null"),
                 Some(vals) => {
                     let mut s = s.serialize_seq(Some(vals.len()))?;
-                    for v in *vals {
+                    for v in vals {
                         s.serialize_element(v)?;
                     }
                     s.end()

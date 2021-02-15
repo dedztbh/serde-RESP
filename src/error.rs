@@ -13,8 +13,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     /// For custom errors by serde.
     Message(String),
-    // Eof,
-    // Syntax,
+    Eof,
+    Syntax,
     /// Type is not mapped to a RESP type.
     UnsupportedType,
     /// Integer value does not fit in an i64.
@@ -23,12 +23,10 @@ pub enum Error {
     Io(String),
     /// Trying to convert non-utf-8 bytes to string.
     FromUtf8(String),
-    // ExpectedInteger,
-    // ExpectedString,
-    // ExpectedNull,
-    // ExpectedArray,
-    // ExpectedArrayEnd,
-    // TrailingCharacters,
+    ExpectedInteger,
+    ExpectedString,
+    ExpectedNull,
+    TrailingCharacters,
 }
 
 impl ser::Error for Error {
@@ -54,6 +52,7 @@ impl Display for Error {
             Error::FromUtf8(e) => {
                 formatter.write_str(&format!("an string conversion error occurred: {}", e))
             }
+            _ => unimplemented!(),
         }
     }
 }
