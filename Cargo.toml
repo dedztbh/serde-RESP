@@ -3,7 +3,6 @@ name = "serde-resp"
 version = "0.1.0"
 authors = ["DEDZTBH <peiqial@outlook.com>"]
 edition = "2018"
-license = "MIT"
 license-file = "LICENSE"
 description = "Redis RESP protocol serialization and deserialization with serde"
 repository = "https://github.com/DEDZTBH/serde-RESP"
