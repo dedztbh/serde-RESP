@@ -6,10 +6,10 @@ use std::io;
 use std::io::ErrorKind;
 use std::string::FromUtf8Error;
 
-/// Result type used by the crate
+/// Result type used by the crate.
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// Error type used by the crate
+/// Error type used by the crate.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Error {
     /// For custom errors by serde.
@@ -41,7 +41,9 @@ impl Display for Error {
         match self {
             Error::Message(msg) => formatter.write_str(msg),
             Error::Eof => formatter.write_str("unexpected end of input"),
-            Error::Syntax => formatter.write_str("syntax error"),
+            Error::Syntax => formatter.write_str(
+                "syntax error. possible error: invalid integer or type byte, missing CRLF.",
+            ),
             Error::Io(e) => formatter.write_str(&format!("an IO error occurred: {}", e)),
             Error::FromUtf8(e) => {
                 formatter.write_str(&format!("an string conversion error occurred: {}", e))

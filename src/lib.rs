@@ -3,9 +3,10 @@
 //! [Read Specification](https://redis.io/topics/protocol)
 //!
 //! ## Usage
-//! IMPORTANT: Do NOT serialize and deserialize with any other types besides [RESP](RESP)! You may get panic or incorrect results!
+//! **IMPORTANT: Do NOT (de)serialize with any other types besides `RESP/RESPType`! You may get panic or incorrect results!**
+//! [Why?](https://github.com/DEDZTBH/serde-RESP/blob/master/README.md#why-resptype-wrapper)
 //!
-//! Here are the RESP types and their corresponding Rust types for serde.
+//! Here are the RESP types and their corresponding Rust types for (de)serialize operations.
 //!
 //! - `Simple String`
 //!     + [RESP::SimpleString(String)](RESPType::SimpleString)
@@ -44,7 +45,10 @@
 //!         array_null!(),
 //!     ];
 //!     let serialized = ser::to_string(&resp_array).unwrap();
-//!     assert_eq!("*7\r\n+simple string\r\n-error string\r\n:42\r\n$11\r\nbulk string\r\n$-1\r\n*2\r\n+arrays of arrays!\r\n*1\r\n+OK ENOUGH!\r\n*-1\r\n", serialized);
+//!     assert_eq!(
+//!         "*7\r\n+simple string\r\n-error string\r\n:42\r\n$11\r\nbulk string\r\n$-1\r\n*2\r\n+arrays of arrays!\r\n*1\r\n+OK ENOUGH!\r\n*-1\r\n",
+//!         serialized
+//!     );
 //!     let deserialized = de::from_str(&serialized).unwrap();
 //!     assert_eq!(resp_array, deserialized);
 //! ```
@@ -56,9 +60,9 @@ pub mod ser;
 
 pub use error::{Error, Result};
 
-#[derive(Eq, PartialEq, Clone, Debug)]
 /// This enum creates a one-to-one type mapping with RESP types.
-/// Please only use variants of this type for serde operations.
+/// Please only use variants of this type for (de)serialize operations.
+#[derive(Eq, PartialEq, Clone, Debug)]
 pub enum RESPType {
     /// Correspond to simple string in RESP.
     /// Also refer to [simple!](simple!) macro.

@@ -1,6 +1,6 @@
 [package]
 name = "serde-resp"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["DEDZTBH <peiqial@outlook.com>"]
 edition = "2018"
 license = "MIT"

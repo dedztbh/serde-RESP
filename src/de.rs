@@ -6,7 +6,7 @@ use serde::Deserialize;
 use std::fmt;
 use std::io::{BufRead, BufReader, Cursor, Read};
 
-/// Serializer for RESP format
+/// Deserializer for RESP format
 pub struct Deserializer<'de, R: BufRead> {
     reader: &'de mut R,
 }
@@ -63,6 +63,7 @@ where
 }
 
 impl<'de, R: BufRead> Deserializer<'de, R> {
+    // read until LF, trim end, and parse to isize.
     fn read_isize(&mut self) -> Result<isize> {
         let mut buffer = String::new();
         self.reader.read_line(&mut buffer)?;
@@ -219,9 +220,11 @@ impl<'de, 'a, R: BufRead> de::Deserializer<'de> for &'a mut Deserializer<'de, R>
         if x < 0 {
             return visitor.visit_none();
         }
-        let mut buffer = vec![0u8; x as usize];
+        let mut buffer = vec![0u8; (x + 2) as usize]; // also read CRLF
         self.reader.read_exact(&mut buffer)?;
-        self.reader.read_exact(&mut [0u8; 2])?; // also consume CRLF
+        if buffer.split_off(x as usize) != b"\r\n" {
+            return Err(Error::Syntax); // Not CRLF
+        }
         visitor.visit_byte_buf(buffer)
     }
 
